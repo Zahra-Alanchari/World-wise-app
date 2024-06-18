@@ -1,10 +1,11 @@
 // "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=0&longitude=0"
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import styles from "./Form.module.css";
 import Button from "./Button";
-import { useNavigate } from "react-router-dom";
+import BackButton from "./backbtn";
+import { useUrlPosition } from "../hooks/useUrlPosition";
 
 export function convertToEmoji(countryCode) {
   const codePoints = countryCode
@@ -13,16 +14,39 @@ export function convertToEmoji(countryCode) {
     .map((char) => 127397 + char.charCodeAt());
   return String.fromCodePoint(...codePoints);
 }
-
+const Url= "https://api.bigdatacloud.net/data/reverse-geocode-client"
 function Form() {
-  const navigate = useNavigate()
+  const [Lat, Lng] = useUrlPosition();
   const [cityName, setCityName] = useState("");
   const [country, setCountry] = useState("");
   const [date, setDate] = useState(new Date());
   const [notes, setNotes] = useState("");
+  const[isLoadingGeo, setIsLoadingGeo]= useState(false)
+
+  useEffect(function(){
+    async function fetchCityData(){
+      try{
+        setIsLoadingGeo(true)
+        const res = await fetch(`${Url}?latitude=${Lat}&longitude=${Lng}`)
+        const data = await res.json()
+        if(!data.countryCode) throw new Error("its not a country")
+        setCityName(data.city || data.locality || "")
+        setCountry(data.countryName)
+      }catch(err){
+
+      }finally{
+        setIsLoadingGeo(false)
+      }
+    }
+    fetchCityData()
+  },[Lat, Lng])
+
+  function handleSubmit(e){
+    e.preventDefault()
+  }
 
   return (
-    <form className={styles.form}>
+    <form className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.row}>
         <label htmlFor="cityName">City name</label>
         <input
@@ -53,9 +77,7 @@ function Form() {
 
       <div className={styles.buttons}>
         <Button type='primary'>Add</Button>
-        <Button type='back' onClick={(e)=> {
-          e.preventDefault()
-          navigate(-1)}}>&larr; Back</Button>
+        <BackButton/>
       </div>
     </form>
   );
